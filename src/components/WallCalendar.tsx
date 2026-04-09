@@ -31,6 +31,18 @@ const formatISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).pa
 let holidaysPromise: Promise<any> | null = null;
 const getHolidays = () => holidaysPromise ??= import('date-holidays').then(m => new m.default('IN'));
 
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) setMatches(media.matches);
+    const listener = () => setMatches(media.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, [matches, query]);
+  return matches;
+}
+
 // --- Main Component ---
 export function WallCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -56,8 +68,112 @@ export function WallCalendar() {
     else setEndDate(day);
   }, [startDate, endDate]);
 
+  const isMobileHorizontal = useMediaQuery('(max-width: 1023px) and (max-height: 500px) and (orientation: landscape)');
+  const isMobileVertical = useMediaQuery('(max-width: 767px) and (orientation: portrait)');
+
+  if (isMobileHorizontal) {
+    return (
+      <div className="absolute inset-0 w-full h-full bg-black overflow-hidden flex items-center justify-center p-2 md:p-4 gap-3 md:gap-6">
+        <style>{`
+          @keyframes imgFade { from { opacity: 0; transform: scale(1.05); } to { opacity: 1; transform: scale(1); } }
+          .anim-img { animation: imgFade 0.8s ease-in-out forwards; }
+          @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+          .anim-slide-up { animation: slideUp 0.3s ease-out forwards; }
+          @keyframes panelIn { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+          .anim-panel { animation: panelIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        `}</style>
+        <img key={monthKey} src={currentImage} className="absolute inset-0 w-full h-full object-cover anim-img" referrerPolicy="no-referrer" {...({ fetchPriority: "high" } as React.ImgHTMLAttributes<HTMLImageElement>)} />
+        <div className="absolute inset-0 bg-black/50 pointer-events-none" />
+
+        {/* Left: Calendar Container */}
+        <div className="relative z-10 flex-1 h-full max-h-[340px] max-w-[500px] backdrop-blur-2xl bg-black/40 border border-white/10 rounded-3xl p-5 flex gap-6 shadow-2xl">
+          {/* Grid */}
+          <div className="flex-1 flex flex-col justify-center h-full max-h-[280px]">
+            <CalendarGrid currentDate={currentDate} startDate={startDate} endDate={endDate} onDateClick={onDateClick} isCompact={true} />
+          </div>
+          {/* Month & Arrows */}
+          <div className="flex flex-col justify-between items-end min-w-[100px] py-2">
+            <div className="text-right">
+              <h2 key={monthKey} className="text-2xl md:text-3xl font-serif text-white tracking-wide anim-slide-up">
+                {currentDate.toLocaleString('default', { month: 'long' })}
+              </h2>
+              <p className="text-[10px] text-white/60 tracking-[0.2em] uppercase mt-1">{currentDate.getFullYear()}</p>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => shiftMonth(-1)} className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors backdrop-blur-md"><ChevronLeft size={18} /></button>
+              <button type="button" onClick={() => shiftMonth(1)} className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors backdrop-blur-md"><ChevronRight size={18} /></button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Title & Buttons */}
+        <div className="relative z-10 flex flex-col justify-between h-full max-h-[340px] w-[120px] md:w-[140px] shrink-0 py-2">
+          <div>
+            <h1 className="text-white/90 font-serif text-base md:text-lg tracking-widest uppercase drop-shadow-lg leading-tight">Wanderlust</h1>
+            <p className="text-white/60 text-[7px] md:text-[8px] tracking-[0.2em] uppercase mt-1 drop-shadow-md">Annual Collection</p>
+          </div>
+          <div className="flex flex-col gap-3">
+            <button onClick={() => setActivePanel('holidays')} className="w-full py-2.5 bg-[#E07A5F] text-white text-xs font-bold rounded-xl shadow-md hover:brightness-110 transition-all">Holidays</button>
+            <button onClick={() => setActivePanel('notes')} className="w-full py-2.5 bg-[#D4AF37] text-black text-xs font-bold rounded-xl shadow-md hover:brightness-110 transition-all">Notes</button>
+          </div>
+        </div>
+
+        {activePanel === 'notes' && <NotesPanel currentDate={currentDate} monthKey={monthKey} startDate={startDate} endDate={endDate} onClose={() => setActivePanel(null)} />}
+        {activePanel === 'holidays' && <HolidaysPanel currentDate={currentDate} onClose={() => setActivePanel(null)} />}
+      </div>
+    );
+  }
+
+  if (isMobileVertical) {
+    return (
+      <div className="absolute inset-0 w-full h-full bg-black overflow-hidden flex flex-col justify-end p-4 pb-8">
+        <style>{`
+          @keyframes imgFade { from { opacity: 0; transform: scale(1.05); } to { opacity: 1; transform: scale(1); } }
+          .anim-img { animation: imgFade 0.8s ease-in-out forwards; }
+          @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+          .anim-slide-up { animation: slideUp 0.3s ease-out forwards; }
+          @keyframes panelIn { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+          .anim-panel { animation: panelIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        `}</style>
+        <img key={monthKey} src={currentImage} className="absolute inset-0 w-full h-full object-cover anim-img" referrerPolicy="no-referrer" {...({ fetchPriority: "high" } as React.ImgHTMLAttributes<HTMLImageElement>)} />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20 pointer-events-none" />
+
+        <div className="absolute top-8 left-6 z-20 pointer-events-none">
+          <h1 className="text-white/90 font-serif text-3xl tracking-widest uppercase drop-shadow-lg leading-tight">Wanderlust</h1>
+          <p className="text-white/60 text-[9px] tracking-[0.4em] uppercase mt-1 drop-shadow-md">Annual Collection</p>
+        </div>
+
+        <div className="relative z-10 w-full max-w-[500px] mx-auto backdrop-blur-2xl bg-black/40 border border-white/10 rounded-[2rem] p-5 shadow-2xl mb-4">
+          <div className="flex justify-between items-end mb-6">
+            <div>
+              <h2 key={monthKey} className="text-4xl font-serif text-white tracking-wide anim-slide-up">
+                {currentDate.toLocaleString('default', { month: 'long' })}
+              </h2>
+              <p className="text-xs text-white/60 tracking-[0.2em] uppercase mt-1">{currentDate.getFullYear()}</p>
+            </div>
+            <div className="flex gap-2 mb-1">
+              <button type="button" onClick={() => shiftMonth(-1)} className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors backdrop-blur-md"><ChevronLeft size={20} /></button>
+              <button type="button" onClick={() => shiftMonth(1)} className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors backdrop-blur-md"><ChevronRight size={20} /></button>
+            </div>
+          </div>
+          <CalendarGrid currentDate={currentDate} startDate={startDate} endDate={endDate} onDateClick={onDateClick} />
+        </div>
+
+        {!activePanel && (
+          <div className="relative z-10 flex gap-3 w-full max-w-[500px] mx-auto">
+            <button onClick={() => setActivePanel('holidays')} className="flex-1 py-3 bg-[#E07A5F] text-white text-sm font-bold rounded-2xl shadow-lg hover:brightness-110 transition-all">Holidays</button>
+            <button onClick={() => setActivePanel('notes')} className="flex-1 py-3 bg-[#D4AF37] text-black text-sm font-bold rounded-2xl shadow-lg hover:brightness-110 transition-all">Notes</button>
+          </div>
+        )}
+
+        {activePanel === 'notes' && <NotesPanel currentDate={currentDate} monthKey={monthKey} startDate={startDate} endDate={endDate} onClose={() => setActivePanel(null)} />}
+        {activePanel === 'holidays' && <HolidaysPanel currentDate={currentDate} onClose={() => setActivePanel(null)} />}
+      </div>
+    );
+  }
+
   return (
-    <div className="calendar-container relative w-full h-full min-h-[550px] max-w-[1400px] max-h-[900px] bg-black rounded-[2rem] sm:rounded-[3rem] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.6)] flex flex-col justify-end p-4 sm:p-8 md:p-12 border border-white/10 mx-auto">
+    <div className="relative w-full h-full min-h-[550px] max-w-[1400px] max-h-[900px] bg-black rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.6)] flex flex-col justify-end p-4 md:p-8 lg:p-12 border border-white/10 mx-auto">
       <style>{`
         @keyframes imgFade { from { opacity: 0; transform: scale(1.05); } to { opacity: 1; transform: scale(1); } }
         .anim-img { animation: imgFade 0.8s ease-in-out forwards; }
@@ -65,41 +181,38 @@ export function WallCalendar() {
         .anim-slide-up { animation: slideUp 0.3s ease-out forwards; }
         @keyframes panelIn { from { transform: translateY(-100%); } to { transform: translateY(0); } }
         .anim-panel { animation: panelIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-        @media (max-height: 500px) {
-          .calendar-container { transform: scale(0.65); transform-origin: center center; }
-        }
       `}</style>
 
       <img key={monthKey} src={currentImage} className="absolute inset-0 w-full h-full object-cover anim-img" referrerPolicy="no-referrer" {...({ fetchPriority: "high" } as React.ImgHTMLAttributes<HTMLImageElement>)} />
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10 pointer-events-none" />
       <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent pointer-events-none" />
 
-      <div className="absolute top-4 left-4 sm:top-12 sm:left-12 z-20 pointer-events-none max-w-[45%] sm:max-w-none">
-        <h1 className="text-white/90 font-serif text-lg sm:text-4xl tracking-widest uppercase drop-shadow-lg leading-tight">Wanderlust</h1>
-        <p className="text-white/60 text-[6px] sm:text-xs tracking-[0.4em] uppercase mt-0.5 sm:mt-2 drop-shadow-md">Annual Collection</p>
+      <div className="absolute top-6 left-5 md:top-12 md:left-12 z-20 pointer-events-none max-w-[55%] md:max-w-none">
+        <h1 className="text-white/90 font-serif text-xl md:text-4xl tracking-widest uppercase drop-shadow-lg leading-tight">Wanderlust</h1>
+        <p className="text-white/60 text-[8px] md:text-xs tracking-[0.4em] uppercase mt-1 md:mt-2 drop-shadow-md">Annual Collection</p>
       </div>
 
       {!activePanel && (
         <>
-          <Ribbon title="NOTES" icon={<Bookmark className="w-3 h-3 sm:w-5 sm:h-5 text-black/90 fill-black/90" />} color="bg-[#D4AF37]" text="text-black/90" h="h-[60px] sm:h-[166px]" pos="right-4 sm:right-24" onClick={() => setActivePanel('notes')} />
-          <Ribbon title="HOLIDAYS" icon={<CalendarDays className="w-3 h-3 sm:w-5 sm:h-5 text-white/90" />} color="bg-[#E07A5F]" text="text-white/90" h="h-[80px] sm:h-[196px]" pos="right-12 sm:right-44" onClick={() => setActivePanel('holidays')} />
+          <Ribbon title="NOTES" icon={<Bookmark className="w-3 h-3 md:w-5 md:h-5 text-black/90 fill-black/90" />} color="bg-[#D4AF37]" text="text-black/90" h="h-[80px] md:h-[166px]" pos="right-4 md:right-8 lg:right-12 xl:right-24" onClick={() => setActivePanel('notes')} />
+          <Ribbon title="HOLIDAYS" icon={<CalendarDays className="w-3 h-3 md:w-5 md:h-5 text-white/90" />} color="bg-[#E07A5F]" text="text-white/90" h="h-[100px] md:h-[196px]" pos="right-16 md:right-28 lg:right-32 xl:right-44" onClick={() => setActivePanel('holidays')} />
         </>
       )}
 
       {activePanel === 'notes' && <NotesPanel currentDate={currentDate} monthKey={monthKey} startDate={startDate} endDate={endDate} onClose={() => setActivePanel(null)} />}
       {activePanel === 'holidays' && <HolidaysPanel currentDate={currentDate} onClose={() => setActivePanel(null)} />}
 
-      <div className="relative z-10 w-full sm:w-[450px] md:w-[500px] backdrop-blur-2xl bg-black/40 border border-white/10 rounded-2xl sm:rounded-[2rem] p-3 sm:p-8 shadow-2xl mt-auto transition-all">
-        <div className="flex justify-between items-end mb-2 sm:mb-8">
+      <div className="relative z-10 w-full md:w-[450px] lg:w-[500px] backdrop-blur-2xl bg-black/40 border border-white/10 rounded-2xl md:rounded-[2rem] p-4 md:p-8 shadow-2xl mt-auto transition-all">
+        <div className="flex justify-between items-end mb-4 md:mb-8">
           <div>
-            <h2 key={monthKey} className="text-2xl sm:text-5xl font-serif text-white tracking-wide anim-slide-up">
+            <h2 key={monthKey} className="text-3xl md:text-5xl font-serif text-white tracking-wide anim-slide-up">
               {currentDate.toLocaleString('default', { month: 'long' })}
             </h2>
-            <p className="text-[10px] sm:text-sm text-white/60 tracking-[0.2em] uppercase mt-1 sm:mt-2">{currentDate.getFullYear()}</p>
+            <p className="text-[10px] md:text-sm text-white/60 tracking-[0.2em] uppercase mt-1 md:mt-2">{currentDate.getFullYear()}</p>
           </div>
           <div className="flex gap-1 mb-1">
-            <button type="button" onClick={() => shiftMonth(-1)} className="p-2 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors backdrop-blur-md"><ChevronLeft size={16} /></button>
-            <button type="button" onClick={() => shiftMonth(1)} className="p-2 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors backdrop-blur-md"><ChevronRight size={16} /></button>
+            <button type="button" onClick={() => shiftMonth(-1)} className="p-2 md:p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors backdrop-blur-md"><ChevronLeft size={16} /></button>
+            <button type="button" onClick={() => shiftMonth(1)} className="p-2 md:p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors backdrop-blur-md"><ChevronRight size={16} /></button>
           </div>
         </div>
         <CalendarGrid currentDate={currentDate} startDate={startDate} endDate={endDate} onDateClick={onDateClick} />
@@ -109,7 +222,7 @@ export function WallCalendar() {
 }
 
 // --- Subcomponents ---
-const CalendarGrid = React.memo(({ currentDate, startDate, endDate, onDateClick }: any) => {
+const CalendarGrid = React.memo(({ currentDate, startDate, endDate, onDateClick, isCompact }: any) => {
   const [hoverDate, setHoverDate] = useState<Date | null>(null);
   const [holidays, setHolidays] = useState<Set<string>>(new Set());
 
@@ -141,11 +254,11 @@ const CalendarGrid = React.memo(({ currentDate, startDate, endDate, onDateClick 
   }, [startDate, endDate, hoverDate]);
 
   return (
-    <div>
-      <div className="grid grid-cols-7 mb-4">
-        {WEEK_DAYS.map((d, i) => <div key={d} className={`text-center text-[10px] sm:text-xs font-bold tracking-widest uppercase ${i >= 5 ? 'text-white/50' : 'text-white/70'}`}>{d}</div>)}
+    <div className={isCompact ? "h-full flex flex-col" : ""}>
+      <div className={`grid grid-cols-7 ${isCompact ? 'mb-1 shrink-0' : 'mb-4'}`}>
+        {WEEK_DAYS.map((d, i) => <div key={d} className={`text-center text-[9px] md:text-[10px] lg:text-xs font-bold tracking-widest uppercase ${i >= 5 ? 'text-white/50' : 'text-white/70'}`}>{d}</div>)}
       </div>
-      <div className="grid grid-cols-7 gap-y-2" onMouseLeave={() => setHoverDate(null)}>
+      <div className={`grid grid-cols-7 ${isCompact ? 'flex-1 gap-y-0.5' : 'gap-y-2'}`} style={isCompact ? { gridTemplateRows: `repeat(${gridDays.length / 7}, minmax(0, 1fr))` } : undefined} onMouseLeave={() => setHoverDate(null)}>
         {gridDays.map((day, i) => {
           const dayStr = formatISO(day);
           const isCurr = day.getMonth() === currentDate.getMonth();
@@ -158,16 +271,21 @@ const CalendarGrid = React.memo(({ currentDate, startDate, endDate, onDateClick 
           const isBetween = rStart && rEnd && day > rStart && day < rEnd;
           const isHover = hoverDate && isSameDay(day, hoverDate);
 
+          let textClass = 'text-white font-medium';
+          if (isSel) textClass = 'text-black font-bold';
+          else if (!isCurr) textClass = 'text-white/20';
+          else if (isToday) textClass = 'text-sky-400 font-bold';
+          else if (isHol || i % 7 === 6) textClass = 'text-red-400 font-bold';
+          else if (i % 7 === 5) textClass = 'text-white/70';
+
           return (
-            <div key={dayStr} onClick={() => onDateClick(day)} onMouseEnter={() => setHoverDate(day)} className={`relative flex flex-col items-center justify-center h-6 sm:h-12 cursor-pointer ${isSel ? 'text-black font-bold' : !isCurr ? 'text-white/20' : i % 7 >= 5 ? 'text-white/70' : 'text-white font-medium'}`}>
+            <div key={dayStr} onClick={() => onDateClick(day)} onMouseEnter={() => setHoverDate(day)} className={`relative flex flex-col items-center justify-center ${isCompact ? 'h-full w-full min-h-[20px]' : 'h-8 md:h-12'} cursor-pointer ${textClass}`}>
               {isBetween && <div className="absolute inset-0 bg-white/20" />}
-              {isSelStart && rEnd && !isSameDay(rStart, rEnd) && <div className="absolute inset-y-0 right-0 w-1/2 bg-white/20" />}
-              {isSelEnd && rStart && !isSameDay(rStart, rEnd) && <div className="absolute inset-y-0 left-0 w-1/2 bg-white/20" />}
-              {!isSel && !isBetween && isHover && <div className="absolute inset-0 rounded-full bg-white/10" />}
+              {isSelStart && rEnd && !isSameDay(rStart, rEnd) && <div className="absolute inset-0 rounded-l-full bg-white/20" />}
+              {isSelEnd && rStart && !isSameDay(rStart, rEnd) && <div className="absolute inset-0 rounded-r-full bg-white/20" />}
+              {!isSel && !isBetween && !isSelStart && !isSelEnd && isHover && <div className="absolute inset-0 rounded-full bg-white/10" />}
               {isSel && <div className="absolute inset-0 rounded-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.3)]" />}
-              <span className="z-10 text-xs sm:text-base">{day.getDate()}</span>
-              {isToday && <div className={`absolute top-1 w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full z-10 ${isSel ? 'bg-sky-600' : 'bg-sky-400/70 shadow-[0_0_4px_rgba(56,189,248,0.4)]'}`} />}
-              {isHol && <div className={`absolute bottom-1 w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full z-10 ${isSel ? 'bg-orange-600' : 'bg-orange-500 shadow-[0_0_5px_#f97316]'}`} />}
+              <span className="z-10 text-xs md:text-base">{day.getDate()}</span>
             </div>
           );
         })}
@@ -176,20 +294,20 @@ const CalendarGrid = React.memo(({ currentDate, startDate, endDate, onDateClick 
   );
 });
 
-const Ribbon = React.memo(({ title, icon, color, text, h, pos, onClick }: any) => (
-  <div onClick={onClick} className={`absolute top-0 ${pos} z-40 cursor-pointer group anim-panel`} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}>
-    <div className={`w-8 sm:w-16 ${color} ${h} shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-300 group-hover:brightness-110 group-hover:translate-y-4 -mt-4`} style={{ clipPath: 'polygon(0 0, 100% 0, 100% 100%, 50% 85%, 0 100%)' }}>
-      <div className="flex flex-col items-center justify-start h-full pt-3 sm:pt-8 gap-1 sm:gap-2">
+const Ribbon = React.memo(({ title, icon, color, text, h, pos, onClick, className }: any) => (
+  <div onClick={onClick} className={`absolute top-0 ${pos} z-40 cursor-pointer group anim-panel ${className || ''}`} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}>
+    <div className={`w-8 md:w-16 ${color} ${h} shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-300 group-hover:brightness-110 group-hover:translate-y-4 -mt-4`} style={{ clipPath: 'polygon(0 0, 100% 0, 100% 100%, 50% 85%, 0 100%)' }}>
+      <div className="flex flex-col items-center justify-start h-full pt-3 md:pt-8 gap-1 md:gap-2">
         {icon}
-        <span className={`${text} font-extrabold tracking-[0.2em] text-[8px] sm:text-[12px]`} style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>{title}</span>
+        <span className={`${text} font-extrabold tracking-[0.2em] text-[8px] md:text-[12px]`} style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>{title}</span>
       </div>
     </div>
   </div>
 ));
 
 const SidePanel = React.memo(({ title, sub, onClose, children, footer, full }: any) => (
-  <div className={`absolute top-0 right-4 sm:right-16 w-[calc(100%-2rem)] sm:w-[420px] ${full ? 'h-[calc(100%-2.5rem)] sm:h-[85%] max-h-[650px]' : 'max-h-[calc(100%-2.5rem)] sm:max-h-[85%]'} bg-[#FDFBF7] shadow-[0_30px_60px_rgba(0,0,0,0.7)] rounded-b-[2rem] z-50 flex flex-col border border-t-0 border-[#E5E0D8] anim-panel`}>
-    <div className="flex justify-between items-center p-4 sm:p-8 border-b border-[#E5E0D8] bg-[#F5F3E9]">
+  <div className={`absolute top-0 right-4 md:right-16 w-[calc(100%-2rem)] md:w-[420px] ${full ? 'h-[calc(100%-2.5rem)] md:h-[85%] max-h-[650px]' : 'max-h-[calc(100%-2.5rem)] md:max-h-[85%]'} bg-[#FDFBF7] shadow-[0_30px_60px_rgba(0,0,0,0.7)] rounded-b-[2rem] z-50 flex flex-col border border-t-0 border-[#E5E0D8] anim-panel`}>
+    <div className="flex justify-between items-center p-4 md:p-8 border-b border-[#E5E0D8] bg-[#F5F3E9]">
       <div><h3 className="font-serif text-2xl text-gray-800">{title}</h3><p className="text-xs text-gray-500 tracking-widest uppercase mt-1">{sub}</p></div>
       <button type="button" onClick={onClose} className="p-2 hover:bg-black/5 rounded-full transition-colors"><X size={24} className="text-gray-600" /></button>
     </div>
@@ -212,12 +330,12 @@ const NotesPanel = React.memo(({ currentDate, monthKey, startDate, endDate, onCl
 
   return (
     <SidePanel title="Monthly Notes" sub={currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })} onClose={onClose} full footer={
-      <div className="p-4 sm:p-6 bg-[#F5F3E9] border-t border-[#E5E0D8] flex justify-between items-center rounded-b-[2rem]">
+      <div className="p-4 md:p-6 bg-[#F5F3E9] border-t border-[#E5E0D8] flex justify-between items-center rounded-b-[2rem]">
         <span className="text-xs text-gray-400 font-medium">{note.length} chars</span>
         <button type="button" onClick={insertDate} disabled={!startDate} className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm ${startDate ? 'bg-[#D4AF37] text-black hover:bg-[#c5a028] hover:-translate-y-0.5' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}><PenLine size={16} /> Insert {endDate ? 'Range' : 'Date'}</button>
       </div>
     }>
-      <div className="flex-grow relative p-4 sm:p-8 overflow-hidden">
+      <div className="flex-grow relative p-4 md:p-8 overflow-hidden">
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")' }} />
         <textarea value={note} onChange={e => setNote(e.target.value)} className="w-full h-full bg-transparent resize-none overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] focus:outline-none text-gray-800 font-medium relative z-10" style={{ lineHeight: '32px', backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, #E5E0D8 31px, #E5E0D8 32px)', backgroundAttachment: 'local' }} placeholder="Jot down your thoughts..." spellCheck="false" />
       </div>
@@ -235,7 +353,7 @@ const HolidaysPanel = React.memo(({ currentDate, onClose }: any) => {
 
   return (
     <SidePanel title="Public Holidays" sub={currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })} onClose={onClose}>
-      <div className="flex-grow relative p-4 sm:p-8 overflow-y-auto">
+      <div className="flex-grow relative p-4 md:p-8 overflow-y-auto">
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")' }} />
         {hols.length > 0 ? (
           <ul className="relative z-10 space-y-4">
