@@ -39,15 +39,13 @@ You need to have Node.js and npm (Node Package Manager) installed on your machin
    Open your terminal and run the following command to clone the project:
 
    ```bash
-   git clone https://github.com/your-username/web-calendar.git
+   git clone https://github.com/jxeal/WebCalender.git
    ```
-
-   _(Note: Replace the URL with the actual repository URL if you host this on GitHub)_
 
 2. **Navigate to the project directory:**
 
    ```bash
-   cd web-calendar
+   cd WebCalender
    ```
 
 3. **Install dependencies:**
