@@ -2,8 +2,6 @@
 
 A beautifully designed, fully responsive, and interactive web calendar application. Built with React and Tailwind CSS, it features dynamic monthly backgrounds, public holiday tracking, date range selection, and a built-in notes system.
 
-![Wanderlust Calendar](https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2070&auto=format&fit=crop)
-
 ## 🌟 Live Demo
 
 Check out the live application here: **[https://web-calender.vercel.app/](https://web-calender.vercel.app/)**
